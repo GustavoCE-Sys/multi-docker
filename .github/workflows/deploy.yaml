@@ -1,0 +1,29 @@
+name: Deploy MultiDocker
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - run: docker build -t gustavoce/react-test -f ./client/Dockerfile.dev ./client
+      - run: docker run -e CI=true gustavoce/react-test npm test
+
+      - name: Build production images
+        run: |
+          docker build -t gustavoce/multi-client ./client
+          docker build -t gustavoce/multi-nginx ./nginx
+          docker build -t gustavoce/multi-server ./server
+          docker build -t gustavoce/multi-worker ./worker
+
+      - name: Push production images
+        run: |
+          docker push gustavoce/multi-client
+          docker push gustavoce/multi-nginx
+          docker push gustavoce/multi-server
+          docker push gustavoce/multi-worker
